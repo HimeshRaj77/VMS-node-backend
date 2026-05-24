@@ -274,7 +274,7 @@ const updateQuotation = async (req, res) => {
         structuredData,
         vendorCompany: qData.agency_name || null,
         eventName: qData.event_name || null,
-        grandTotal: qData.final_total_after_gst ? Math.round(qData.final_total_after_gst) : null,
+        grandTotal: qData.final_total_after_gst ? Math.round(qData.final_total_after_gst) : (qData.grand_total_before_gst ? Math.round(qData.grand_total_before_gst) : null),
         totalManpower: qData.total_manpower || null,
         totalServices: qData.total_services || null,
       },
