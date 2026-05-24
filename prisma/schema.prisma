@@ -1,0 +1,79 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model Agency {
+  id            String      @id @default(cuid())
+  agencyName    String
+  contactPerson String
+  email         String      @unique
+  phone         String
+  password      String
+  gstNumber     String
+  address       String
+  city          String
+  state         String
+  role          String      @default("agency")
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  quotation     Quotation?
+  workers       Worker[]
+}
+
+model Admin {
+  id        String   @id @default(cuid())
+  fullName  String
+  email     String   @unique
+  password  String
+  role      String   @default("admin")
+  createdAt DateTime @default(now())
+}
+
+model Quotation {
+  id                  String               @id @default(cuid())
+  agencyId            String               @unique
+  originalFileName    String
+  uploadedFilePath    String
+  extractionStatus    String               @default("pending")
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  agency              Agency               @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  StructuredQuotation StructuredQuotation?
+}
+
+model StructuredQuotation {
+  id                   String    @id
+  structuredData       Json
+  vendorCompany        String?
+  eventName            String?
+  grandTotal           Int?
+  createdAt            DateTime  @default(now())
+  quotationId          String    @unique
+  extractionConfidence Float?
+  sourceFileName       String?
+  totalManpower        Int?
+  totalServices        Int?
+  Quotation            Quotation @relation(fields: [quotationId], references: [id], onDelete: Cascade)
+}
+
+model Worker {
+  id              String   @id @default(cuid())
+  name            String
+  aadharNumber    String
+  dob             String?
+  gender          String?
+  address         String?
+  aadharFrontPath String?
+  agencyId        String
+  serviceId       String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  agency          Agency   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+}
