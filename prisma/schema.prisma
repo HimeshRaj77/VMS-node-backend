@@ -68,12 +68,41 @@ model Worker {
   aadharNumber    String
   dob             String?
   gender          String?
-  address         String?
-  aadharFrontPath String?
   agencyId        String
   serviceId       String
+  department      String   @default("SECURITY")
+  role            String   @default("Security Guards")
+  ratePerDay      Int      @default(300)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
   agency          Agency   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  allocations     Allocation[]
 }
+
+model Allocation {
+  id        String   @id @default(cuid())
+  date      String
+  zone      String
+  slotKey   String
+  workerId  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  worker    Worker   @relation(fields: [workerId], references: [id], onDelete: Cascade)
+
+  @@unique([date, zone, slotKey])
+}
+
+model Requirement {
+  id         String   @id @default(cuid())
+  date       String
+  zone       String
+  department String
+  slots      Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([date, zone, department])
+}
+

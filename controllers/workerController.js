@@ -92,23 +92,64 @@ const extractAadharOCR = async (req, res) => {
 };
 
 /**
+ * Processes Excel sheet to extract worker roster records via Python Backend
+ * POST /api/worker/excel-extract
+ */
+const extractExcelRoster = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: 'Excel roster spreadsheet is required.' });
+    }
+
+    const form = new FormData();
+    form.append('file', fs.createReadStream(req.file.path));
+
+    const response = await axios.post(`${PYTHON_SERVICE_URL}/api/excel/extract`, form, {
+      headers: {
+        ...form.getHeaders()
+      }
+    });
+
+    if (!response.data.success) {
+      throw new Error("Python Excel parser returned failure");
+    }
+
+    return res.status(200).json({
+      message: 'Excel roster parsed successfully.',
+      data: response.data.data,
+      count: response.data.count
+    });
+
+  } catch (error) {
+    console.error('Error during Excel roster extraction:', error.message);
+    const errorDetails = error.response?.data?.detail || error.message;
+    return res.status(500).json({ message: 'Failed to process Excel roster spreadsheet.', details: errorDetails });
+  }
+};
+
+
+/**
  * Registers a worker inside a service department
  * POST /api/worker
  */
 const createWorker = async (req, res) => {
   try {
-    const { name, aadharNumber, dob, gender, address, aadharFrontPath, serviceId } = req.body;
+    const { name, aadharNumber, dob, gender, serviceId, department, role, ratePerDay } = req.body;
     const agencyId = req.agency.id;
 
-    if (!name || !aadharNumber || !serviceId) {
+    if (!name || !aadharNumber || serviceId === undefined || serviceId === null || serviceId === '') {
       return res.status(400).json({ message: 'Name, Aadhaar Number, and Service ID are required.' });
     }
 
+    const srvId = String(serviceId);
+
     // Format clean numeric Aadhaar
-    const cleanAadhar = aadharNumber.replace(/\s+/g, '');
+    const cleanAadhar = String(aadharNumber || '').replace(/\D/g, '');
     if (cleanAadhar.length !== 12 || isNaN(cleanAadhar)) {
       return res.status(400).json({ message: 'Aadhaar Number must be a valid 12-digit numeric sequence.' });
     }
+
+    const parsedRate = parseInt(ratePerDay) || 300;
 
     // Record worker inside the database
     const worker = await prisma.worker.create({
@@ -117,10 +158,11 @@ const createWorker = async (req, res) => {
         aadharNumber: cleanAadhar,
         dob,
         gender,
-        address,
-        aadharFrontPath,
         agencyId,
-        serviceId
+        serviceId: srvId,
+        department: department || 'SECURITY',
+        role: role || 'Security Guards',
+        ratePerDay: parsedRate
       }
     });
 
@@ -199,6 +241,7 @@ const deleteWorker = async (req, res) => {
 
 module.exports = {
   extractAadharOCR,
+  extractExcelRoster,
   createWorker,
   getWorkersByService,
   deleteWorker
